@@ -2,8 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import asyncHandler from './asyncHandler.js';
 
-const authenticate = asyncHandler(async (req, res, next) => {
-
+export const authenticate = asyncHandler(async (req, res, next) => {
     let token;
 
     token=req.cookies.jwt

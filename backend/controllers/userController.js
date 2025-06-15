@@ -60,6 +60,33 @@ export const loginUser=asyncHandler(async(req,res)=>{
         res.status(400).json({message: "User does not exist"});
         return;
     }
+    if(exisingUser){
+        const validPassword= await bcrypt.compare(password, exisingUser.password);
+        if(!validPassword) {
+            res.status(400).json({message: "Invalid password"});
+            return;
+        }
+        const token = createToken(res, exisingUser._id);
+        res.status(200).json({
+            message: "User logged in successfully",
+            _id: exisingUser._id,
+            username: exisingUser.username,
+            email: exisingUser.email,
+            isAdmin: exisingUser.isAdmin,
+            token
+        });
+    } else {
+        res.status(400).json({message: "Invalid credentials"});
+    }
 })
+
+
+export const logoutUser = asyncHandler(async (req, res) => {
+    // Clear the cookie by setting its expiration date to the past
+    res.cookie('jwt', '', { expires: new Date(0), httpOnly: true });
+
+    // Send a response indicating successful logout
+    res.status(200).json({ message: 'User logged out successfully' });
+});
 
 
