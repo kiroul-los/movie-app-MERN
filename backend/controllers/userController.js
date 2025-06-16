@@ -47,38 +47,35 @@ export const createUser = asyncHandler(async(req, res)=> {
 });
 
 //function for login user
-export const loginUser=asyncHandler(async(req,res)=>{
-    const {email, password} = req.body;
+export const loginUser = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
 
-        if(!email || !password) {
-        res.status(400).json({message: "Please fill all the fields"});
-        return;
+    if (!email || !password) {
+        return res.status(400).json({ message: "Please fill all the fields" });
     }
-    // Check if user exists
-    const exisingUser=await User.findOne({email});
-    if(!exisingUser) {
-        res.status(400).json({message: "User does not exist"});
-        return;
+
+    const existingUser = await User.findOne({ email });
+    if (!existingUser) {
+        return res.status(400).json({ message: "User does not exist" });
     }
-    if(exisingUser){
-        const validPassword= await bcrypt.compare(password, exisingUser.password);
-        if(!validPassword) {
-            res.status(400).json({message: "Invalid password"});
-            return;
-        }
-        const token = createToken(res, exisingUser._id);
-        res.status(200).json({
-            message: "User logged in successfully",
-            _id: exisingUser._id,
-            username: exisingUser.username,
-            email: exisingUser.email,
-            isAdmin: exisingUser.isAdmin,
-            token
-        });
-    } else {
-        res.status(400).json({message: "Invalid credentials"});
+
+    const isPasswordValid = await bcrypt.compare(password, existingUser.password);
+    if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid password" });
     }
-})
+
+    const token = createToken(res, existingUser._id);
+
+    return res.status(200).json({
+        message: "User logged in successfully",
+        _id: existingUser._id,
+        username: existingUser.username,
+        email: existingUser.email,
+        isAdmin: existingUser.isAdmin,
+        token
+    });
+});
+
 
 
 export const logoutUser = asyncHandler(async (req, res) => {
@@ -89,4 +86,47 @@ export const logoutUser = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'User logged out successfully' });
 });
 
+export const getAllUsers = asyncHandler(async (req, res) => {
+    const users = await User.find().select('-password'); // Exclude password field
+    if (users.length === 0) {
+        res.status(404).json({ message: 'No users found' });
+        return;
+    }
+    res.status(200).json(users);
+});
 
+export const getCurrentUserProfile = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id).select('-password'); // Exclude password field
+    if (!user) {
+        res.status(404).json({ message: 'User not found' });
+        return;
+    }
+    res.status(200).json(user);
+});
+
+export const updateCurrentUserProfile=asyncHandler(async (req,res)=>{
+    const user=await User.findById(req.body._id);
+
+    if(user){
+            user.username= req.body.username||user.username;
+            user.email= req.body.email||user.email;
+
+        if(req.body.password){
+            // Hash the new password
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(req.body.password, salt);
+        }
+        const updatedUser = await user.save();
+        res.status(200).json({
+            message: 'User profile updated successfully',
+            _id: updatedUser._id,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            isAdmin: updatedUser.isAdmin
+        });
+
+    }else{
+        res.status(404).json({ message: 'User not found' });
+    }
+
+})
